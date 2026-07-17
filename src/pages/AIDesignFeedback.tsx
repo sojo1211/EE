@@ -21,7 +21,7 @@ export default function AIDesignFeedback({ onShowToast }: AIDesignFeedbackProps)
       const reader = new FileReader();
       reader.onloadend = () => {
         setPreviewUrl(reader.result as string);
-        triggerAnalysis(file.name);
+        triggerAnalysis(file);
       };
       reader.readAsDataURL(file);
     }
@@ -41,24 +41,47 @@ export default function AIDesignFeedback({ onShowToast }: AIDesignFeedbackProps)
       const reader = new FileReader();
       reader.onloadend = () => {
         setPreviewUrl(reader.result as string);
-        triggerAnalysis(file.name);
+        triggerAnalysis(file);
       };
       reader.readAsDataURL(file);
     }
   };
 
-  const triggerAnalysis = (filename: string) => {
+  const triggerAnalysis = (file: File) => {
     setIsAnalyzing(true);
     setReport(null);
     onShowToast('디자인 파일을 수신했습니다. 분석을 시작합니다...');
 
-    // Mock 2 second analysis delay
-    setTimeout(() => {
-      const res = generateDesignFeedback(filename);
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('brand_id', 'd3b07384-d113-49c3-a5a4-e301e91c53d2');
+
+    // Live multipart form upload to Render Backend
+    fetch('https://ee-avnj.onrender.com/api/v1/design/feedback', {
+      method: 'POST',
+      body: formData
+    })
+    .then(res => res.json())
+    .then(apiData => {
+      const reportData: FeedbackReport = {
+        score: apiData.score,
+        hierarchy: apiData.feedback.hierarchy,
+        alignment: apiData.feedback.alignment,
+        spacing: apiData.feedback.spacing,
+        colors: apiData.feedback.colors,
+        accessibility: apiData.feedback.accessibility
+      };
+      setReport(reportData);
+      setIsAnalyzing(false);
+      onShowToast('실시간 AI 디자인 피드백 리포트 수신 완료! 📊');
+    })
+    .catch(err => {
+      console.warn("Vision API fetch failed, falling back to local simulation:", err);
+      const res = generateDesignFeedback(file.name);
       setReport(res);
       setIsAnalyzing(false);
       onShowToast('AI 디자인 비주얼 피드백 리포트가 완성되었습니다! 📊');
-    }, 2000);
+    });
   };
 
   const handleReset = () => {

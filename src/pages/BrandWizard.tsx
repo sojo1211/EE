@@ -82,17 +82,63 @@ export default function BrandWizard({ onComplete, onBackToLanding }: BrandWizard
             spread: 60,
             origin: { y: 0.6 }
           });
-          const generated = generateBrand({
-            name,
-            industry,
-            targetAudience,
-            personality,
-            keywords,
-            goals,
-            competitors,
-            styleStyle
+
+          // Live API Call to Render Backend
+          fetch('https://ee-avnj.onrender.com/api/v1/brands/wizard', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              name,
+              industry,
+              targetAudience,
+              personality,
+              keywords,
+              goals,
+              competitors,
+              styleStyle
+            })
+          })
+          .then(res => res.json())
+          .then(apiData => {
+            const localFallback = generateBrand({
+              name,
+              industry,
+              targetAudience,
+              personality,
+              keywords,
+              goals,
+              competitors,
+              styleStyle
+            });
+
+            // Merge server-synthesized copy with visual templates
+            const mergedBrand: BrandData = {
+              ...localFallback,
+              brandStory: apiData.brandStory || localFallback.brandStory,
+              mission: apiData.mission || localFallback.mission,
+              vision: apiData.vision || localFallback.vision,
+              colors: apiData.colors || localFallback.colors,
+              typography: apiData.typography || localFallback.typography,
+              styleStyle: apiData.styleStyle || localFallback.styleStyle,
+            };
+            onComplete(mergedBrand);
+          })
+          .catch(err => {
+            console.warn("Backend fetch failed, falling back to local simulation:", err);
+            const generated = generateBrand({
+              name,
+              industry,
+              targetAudience,
+              personality,
+              keywords,
+              goals,
+              competitors,
+              styleStyle
+            });
+            onComplete(generated);
           });
-          onComplete(generated);
         }, 600);
       }
     }, 150);
